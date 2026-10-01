@@ -1,0 +1,14 @@
+# Extraction output — captures, assets and screenshots are regenerated, not committed
+figma-forge-out/
+*.local.json
+
+# Node
+node_modules/
+npm-debug.log*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
