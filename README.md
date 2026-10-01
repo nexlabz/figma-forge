@@ -5,6 +5,15 @@ Turn **code** and **live websites** into editable Figma designs.
 The Figma MCP server is bundled with this plugin — installing figma-forge installs it. You
 sign in once (`/mcp` → figma → Authenticate) and everything after that is one command.
 
+## Install
+
+```
+/plugin marketplace add nexlabz/figma-forge
+/plugin install figma-forge@figma-forge
+```
+
+Then sign in to Figma once — `/mcp` → **figma** → Authenticate — and run:
+
 ```
 /figma-forge:url-to-figma https://stripe.com
 ```
