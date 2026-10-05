@@ -7,7 +7,10 @@
  * and a reference screenshot.
  *
  * Usage:
- *   node scripts/extract-site.mjs <url> [options]
+ *   node scripts/extract-site.mjs <url|local-html-file> [options]
+ *
+ * A local .html file (a saved Claude artifact, a build output) is served on an
+ * ephemeral loopback port first — file:// would block its scripts and fonts.
  *
  * Options:
  *   --out <dir>          Output directory (default: ./figma-forge-out/<host>)
@@ -27,9 +30,11 @@
  *   --header <k:v>       Extra HTTP header (repeatable)
  */
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
-import { dirname, join, resolve } from 'node:path';
+import { existsSync } from 'node:fs';
+import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { launchChrome, CDPConnection, newPageSession } from './lib/cdp.mjs';
+import { serveLocalFile } from './lib/serve.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -362,10 +367,23 @@ async function main() {
   }
 
   let url = args.url;
-  if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+  let served = null;
+  let label = null;
+  if (!/^https?:\/\//i.test(url)) {
+    // A path on disk? Serve it; otherwise treat it as a bare hostname.
+    const asPath = resolve(url.replace(/^file:\/\//, ''));
+    if (existsSync(asPath)) {
+      served = await serveLocalFile(asPath);
+      label = basename(asPath).replace(/\.html?$/i, '');
+      url = served.url;
+      process.stderr.write(`figma-forge: serving ${asPath} at ${url}\n`);
+    } else {
+      url = 'https://' + url;
+    }
+  }
   let host;
-  try { host = new URL(url).hostname.replace(/^www\./, ''); }
-  catch { console.error(`Not a valid URL: ${args.url}`); process.exit(2); }
+  try { host = label || new URL(url).hostname.replace(/^www\./, ''); }
+  catch { console.error(`Not a valid URL or file: ${args.url}`); process.exit(2); }
 
   const outDir = resolve(args.out || join(process.cwd(), 'figma-forge-out', host));
   await mkdir(outDir, { recursive: true });
@@ -410,6 +428,7 @@ async function main() {
   } finally {
     conn.close();
     await kill();
+    if (served) await served.close();
   }
 
   if (failure) { console.error(`\nExtraction failed: ${failure.message}`); process.exit(1); }

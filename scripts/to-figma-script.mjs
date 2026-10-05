@@ -19,7 +19,9 @@
  *   --auto-layout        Apply auto-layout where the page used flex/grid
  *   --max-bytes <n>      Warn above this script size (default 49000)
  *   --inline-svg-max <n> Inline SVGs up to this many bytes (default 8000)
- *   --split-frames WxH   Emit one Figma frame per node of that size (design boards)
+ *   --split-frames WxH   Emit one Figma frame per node of that size; 'auto'
+ *                        detects the repeated board size on a design canvas
+ *   --auto-label         Name split frames from the caption above each board
  *   --frame-names <file> JSON [{x,y,name,row,col}] naming/placing split frames
  *   --grid-cols <n>      Columns when laying split frames out (default 6)
  *   --grid-gap <n>       Horizontal gap between split frames (default 120)
@@ -62,6 +64,7 @@ function parseArgs(argv) {
     else if (a === '--grid-row-gap') o.gridRowGap = Number(take());
     else if (a === '--only') (o.only = o.only || []).push(take());
     else if (a === '--replace') o.replace = true;
+    else if (a === '--auto-label') o.autoLabel = true;
     else if (a === '-h' || a === '--help') o.help = true;
     else if (a.startsWith('-')) throw new Error(`Unknown option: ${a}`);
     else rest.push(a);
@@ -126,6 +129,87 @@ function findFramesBySize(tree, w, h, tol = 2) {
     out.push(n);
   }
   return out.sort((a, b) => a.rect.y - b.rect.y || a.rect.x - b.rect.x);
+}
+
+/**
+ * Infer the board size on a design canvas: the size that repeats most across
+ * distinct positions. An exploration board is a grid of same-sized artboards,
+ * so the mode of the size histogram is the board — no need to be told 1080x1350.
+ */
+function detectBoardSize(tree, pageArea) {
+  const seen = new Map();            // "wxh" -> Set of "x,y"
+  (function walk(n) {
+    if (!n) return;
+    const r = n.rect || {};
+    const w = Math.round(r.width), h = Math.round(r.height);
+    if (w >= 200 && h >= 200 && (!pageArea || w * h < pageArea * 0.6)) {
+      const k = `${w}x${h}`;
+      if (!seen.has(k)) seen.set(k, new Set());
+      seen.get(k).add(`${Math.round(r.x)},${Math.round(r.y)}`);
+    }
+    for (const c of n.children || []) walk(c);
+  })(tree);
+
+  let best = null;
+  for (const [k, positions] of seen) {
+    const [w, h] = k.split('x').map(Number);
+    const score = positions.size;
+    if (score < 2) continue;         // one of a kind is a section, not a board
+    // Equal counts mean one box nests in the other — a caption wrapper around
+    // the artboard. The artboard is the smaller one, and the one wanted.
+    if (!best || score > best.score || (score === best.score && w * h < best.w * best.h)) {
+      best = { w, h, score, key: k };
+    }
+  }
+  return best;
+}
+
+/** Every TEXT node with its page position, for naming boards from their captions. */
+function collectLabels(tree) {
+  const out = [];
+  (function walk(n) {
+    if (!n) return;
+    if (n.type === 'TEXT' && n.characters && n.rect) {
+      out.push({ text: String(n.characters).trim(), x: n.rect.x, y: n.rect.y, w: n.rect.width });
+    }
+    for (const c of n.children || []) walk(c);
+  })(tree);
+  return out;
+}
+
+/**
+ * Name a board from the caption sitting above it — design canvases label each
+ * board with a short id ("4b") and a title ("Early bird · tape on purple").
+ */
+function labelForBoard(board, labels) {
+  const bx = board.rect.x, by = board.rect.y;
+  const above = labels
+    .filter((t) => t.y < by && t.y > by - 240 && t.x > bx - 60 && t.x < bx + 360 && t.text)
+    .sort((a, b) => b.y - a.y);
+  if (!above.length) return null;
+  const id = above.find((t) => /^[A-Za-z0-9]{1,4}$/.test(t.text));
+  if (!id) return above[0].text.slice(0, 60);
+  const caption = above
+    .filter((t) => t !== id && Math.abs(t.y - id.y) < 24 && t.x > id.x && t.text.length > 2)
+    .sort((a, b) => a.x - b.x)[0];
+  return caption ? `${id.text} · ${caption.text}`.slice(0, 80) : id.text;
+}
+
+/** Rebuild the canvas's own row/column grouping from the boards' positions. */
+function gridFromPositions(boards) {
+  const sorted = [...boards].map((b, i) => ({ i, x: b.rect.x, y: b.rect.y, h: b.rect.height }))
+    .sort((a, b) => a.y - b.y || a.x - b.x);
+  const rows = [];
+  for (const b of sorted) {
+    const row = rows.find((r) => Math.abs(r.y - b.y) < Math.max(40, b.h * 0.5));
+    if (row) row.items.push(b);
+    else rows.push({ y: b.y, items: [b] });
+  }
+  const place = new Map();
+  rows.forEach((r, ri) => {
+    r.items.sort((a, b) => a.x - b.x).forEach((b, ci) => place.set(b.i, { row: ri, col: ci }));
+  });
+  return place;
 }
 
 function unitsOf(tree, maxNodes) {
@@ -585,11 +669,23 @@ async function main() {
 
   // ---- split-frames: one artboard per design board ------------------------
   if (args.splitFrames) {
-    const m = String(args.splitFrames).match(/^(\d+)\s*[x×]\s*(\d+)$/i);
-    if (!m) { console.error(`--split-frames wants WxH, got "${args.splitFrames}"`); process.exit(2); }
-    const W = Number(m[1]), H = Number(m[2]);
+    let W, H;
+    if (/^auto$/i.test(String(args.splitFrames))) {
+      const pageArea = (data.meta.page?.width || 0) * (data.meta.page?.height || 0);
+      const guess = detectBoardSize(data.tree, pageArea);
+      if (!guess) { console.error('Could not detect a repeated board size. Pass --split-frames WxH.'); process.exit(2); }
+      W = guess.w; H = guess.h;
+      process.stderr.write(`figma-forge: detected ${W}x${H} boards (${guess.score} of them)\n`);
+    } else {
+      const m = String(args.splitFrames).match(/^(\d+)\s*[x×]\s*(\d+)$/i);
+      if (!m) { console.error(`--split-frames wants WxH or 'auto', got "${args.splitFrames}"`); process.exit(2); }
+      W = Number(m[1]); H = Number(m[2]);
+    }
     const found = findFramesBySize(data.tree, W, H);
     if (!found.length) { console.error(`No ${W}x${H} nodes found in ${file}.`); process.exit(2); }
+
+    const labels = args.autoLabel ? collectLabels(data.tree) : null;
+    const autoGrid = args.autoLabel ? gridFromPositions(found) : null;
 
     const byPos = {};
     if (args.frameNames) {
@@ -603,16 +699,19 @@ async function main() {
 
     const frames = found.map((n, i) => {
       const meta = byPos[`${Math.round(n.rect.x)},${Math.round(n.rect.y)}`] || {};
-      const col = meta.col != null ? meta.col : i % cols;
-      const row = meta.row != null ? meta.row : Math.floor(i / cols);
+      const auto = autoGrid ? autoGrid.get(i) : null;
+      const col = meta.col != null ? meta.col : auto ? auto.col : i % cols;
+      const row = meta.row != null ? meta.row : auto ? auto.row : Math.floor(i / cols);
       const d = compact(n, ctx);
-      d.n = meta.name || `${host} ${i + 1}`;
+      d.n = meta.name || (labels ? labelForBoard(n, labels) : null) || `${host} ${i + 1}`;
       return { tx: col * (W + gap), ty: row * (H + rowGap), d, bytes: JSON.stringify(d).length, nodes: countNodes(n) };
     });
 
+    // slice(), not the same array: clearing `frames` below would otherwise empty
+    // `picked` with it and every frame would silently disappear.
     const picked = args.only
       ? frames.filter((f) => args.only.some((q) => f.d.n.toLowerCase().includes(q.toLowerCase())))
-      : frames;
+      : frames.slice();
     if (!picked.length) { console.error(`--only matched no frame.`); process.exit(2); }
     frames.length = 0; frames.push(...picked);
 

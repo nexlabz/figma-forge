@@ -1,9 +1,16 @@
 {
   "name": "figma-forge",
-  "description": "Turn code and live websites into Figma designs. Bundles the Figma MCP server plus skills for URL-to-design, code-to-design, and design-token extraction.",
-  "version": "0.1.0",
+  "description": "Turn code, live websites and Claude artifacts into Figma designs. Bundles the Figma MCP server plus skills for URL-to-design, artifact-to-design, code-to-design, and design-token extraction.",
+  "version": "0.2.0",
   "author": {
     "name": "Deep Ellum AI"
   },
-  "keywords": ["figma", "design", "code-to-design", "url-to-design", "design-tokens", "reverse-engineering"]
+  "keywords": [
+    "figma",
+    "design",
+    "code-to-design",
+    "url-to-design",
+    "design-tokens",
+    "reverse-engineering"
+  ]
 }

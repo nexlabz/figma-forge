@@ -4,7 +4,7 @@
       "type": "http",
       "url": "https://mcp.figma.com/mcp",
       "headers": {
-        "X-Figma-Plugin-Bundle": "figma_forge@0_1_0"
+        "X-Figma-Plugin-Bundle": "figma_forge@0_2_0"
       }
     }
   }
