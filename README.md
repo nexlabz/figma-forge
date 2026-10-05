@@ -45,6 +45,7 @@ upload-assets.mjs ──► swaps image placeholders for the real bitmaps
 |---|---|
 | `/figma-forge:url-to-figma <url>` | Website → Figma design |
 | `/figma-forge:code-to-figma <path\|url>` | Codebase page or component library → Figma |
+| `/figma-forge:artifact-to-figma <url>` | Claude artifact → Figma artboards |
 | `/figma-forge:tokens <dir\|url>` | Design tokens → Figma variables and text styles |
 | `/figma-forge:connect` | Check the Figma connection and sign in |
 
@@ -57,6 +58,7 @@ the same place as the command.
 |---|---|
 | `url-to-figma` | The full URL → Figma pipeline |
 | `code-to-figma` | Render route for pages; design-system route for component libraries |
+| `artifact-to-figma` | Claude artifacts → Figma, one artboard per board on a design canvas |
 | `design-tokens` | Token sets → Figma variables, text styles, effect styles, light/dark modes |
 | `figma-connect` | Connection preflight, seats, picking the target file |
 
@@ -98,6 +100,10 @@ Real pages fight naive scrapers. This one handles:
 - **Gradients, shadows, per-corner radii, per-side borders** — parsed to Figma's model
 - **Fonts Figma does not have** — mapped to the nearest available family and weight, and the
   substitutions are reported
+- **Text that must not re-wrap** — Figma measures a hair wider than the browser, so text
+  that was one line stays one line instead of breaking
+- **Rotation and mirroring** — CSS transforms carry through as real Figma transforms, so
+  tilted lockups and flipped icons land the right way round
 
 ## Requirements
 
@@ -111,6 +117,10 @@ Real pages fight naive scrapers. This one handles:
 Usable directly; every one takes `--help`.
 
 ```bash
+# A Claude artifact or any local HTML — served automatically, no web server needed
+node scripts/extract-site.mjs ./artifact.html --viewport 3700x1200 --wait 4000 --out ./out
+node scripts/to-figma-script.mjs ./out/design-*.json --split-frames auto --auto-label --list-sections
+
 # Capture a page at several breakpoints
 node scripts/extract-site.mjs https://example.com --viewports desktop,tablet,mobile --out ./out
 
