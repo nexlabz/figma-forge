@@ -2,7 +2,7 @@
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "figma-forge",
   "metadata": {
-    "description": "Turn code and live websites into editable Figma designs. Bundles the Figma MCP server."
+    "description": "Turn code, live websites and Claude artifacts into editable Figma designs. Bundles the Figma MCP server."
   },
   "owner": {
     "name": "nexlabz"
@@ -10,15 +10,23 @@
   "plugins": [
     {
       "name": "figma-forge",
-      "description": "Turn code and live websites into editable Figma designs. Renders a URL in headless Chrome, extracts real geometry, paints, type and assets, derives design tokens, then builds the page into Figma section by section. Bundles the Figma MCP server.",
-      "version": "0.1.0",
+      "description": "Turn code, live websites and Claude artifacts into editable Figma designs. Renders the source in headless Chrome, extracts real geometry, paints, type and assets, derives design tokens, then builds it into Figma. Bundles the Figma MCP server.",
+      "version": "0.2.0",
       "author": {
         "name": "nexlabz"
       },
       "source": "./",
       "category": "design",
       "homepage": "https://github.com/nexlabz/figma-forge",
-      "tags": ["figma", "design", "code-to-design", "url-to-design", "design-tokens", "mcp"]
+      "tags": [
+        "figma",
+        "design",
+        "code-to-design",
+        "url-to-design",
+        "artifact-to-design",
+        "design-tokens",
+        "mcp"
+      ]
     }
   ]
 }
