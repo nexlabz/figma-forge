@@ -548,21 +548,71 @@
       range.selectNodeContents(el);
       var rects = range.getClientRects();
       var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      var tops = {};
       for (var i = 0; i < rects.length; i++) {
         var r = rects[i];
         if (r.width === 0 && r.height === 0) continue;
         minX = Math.min(minX, r.left); minY = Math.min(minY, r.top);
         maxX = Math.max(maxX, r.right); maxY = Math.max(maxY, r.bottom);
+        // Inline children split a line into several rects; the distinct tops
+        // are the real line count, which decides whether text may wrap.
+        tops[Math.round(r.top)] = 1;
       }
       if (minX === Infinity) return null;
-      return { x: minX + sx, y: minY + sy, width: maxX - minX, height: maxY - minY };
+      return {
+        x: minX + sx, y: minY + sy, width: maxX - minX, height: maxY - minY,
+        lines: Math.max(1, Object.keys(tops).length),
+      };
     } catch (e) { return null; }
+  }
+
+  // ------------------------------------------------------------- transforms
+  // A rotated element's getBoundingClientRect() is the AABB of the *rotated*
+  // box, not its layout box. A pure rotation preserves the centre, so the
+  // unrotated box is the layout size centred on that same point.
+  /** Linear part [a,b,c,d] of the element's own 2D transform, or null. */
+  function decodeMatrix(style) {
+    var tf = style.transform;
+    if (!tf || tf === 'none') return null;
+    var m = tf.match(/^matrix\(([^)]+)\)$/);
+    if (m) {
+      var p = m[1].split(',').map(parseFloat);
+      return [p[0], p[1], p[2], p[3]];
+    }
+    var m3 = tf.match(/^matrix3d\(([^)]+)\)$/);
+    if (m3) {
+      var q = m3[1].split(',').map(parseFloat);
+      return [q[0], q[1], q[4], q[5]];
+    }
+    return null;
+  }
+
+  function decodeRotation(style) {
+    var tf = style.transform;
+    if (!tf || tf === 'none') return 0;
+    var m = tf.match(/^matrix\(([^)]+)\)$/);
+    if (!m) {
+      var m3 = tf.match(/^matrix3d\(([^)]+)\)$/);
+      if (!m3) return 0;
+      var q = m3[1].split(',').map(parseFloat);
+      return Math.atan2(q[1], q[0]) * 180 / Math.PI;
+    }
+    var p = m[1].split(',').map(parseFloat);
+    return Math.atan2(p[1], p[0]) * 180 / Math.PI;
+  }
+
+  /** Rotate a point about a centre by -deg (used to undo an ancestor's spin). */
+  function unrotatePoint(px, py, cx, cy, deg) {
+    var r = -deg * Math.PI / 180;
+    var cos = Math.cos(r), sin = Math.sin(r);
+    var dx = px - cx, dy = py - cy;
+    return { x: cx + dx * cos - dy * sin, y: cy + dx * sin + dy * cos };
   }
 
   var SKIP_TAGS = { SCRIPT: 1, STYLE: 1, NOSCRIPT: 1, TEMPLATE: 1, META: 1, LINK: 1, TITLE: 1, HEAD: 1, BR: 1, WBR: 1 };
   var REPLACED = { IMG: 1, SVG: 1, VIDEO: 1, CANVAS: 1, PICTURE: 1, IFRAME: 1, INPUT: 1, TEXTAREA: 1, SELECT: 1 };
 
-  function walk(el, depth) {
+  function walk(el, depth, frame) {
     if (nodeCount >= MAX_NODES) { truncated = true; return null; }
     if (!el || el.nodeType !== 1) return null;
     var tag = el.tagName;
@@ -574,6 +624,28 @@
     if (style.display === 'none') return null;
 
     var rect = absRect(el);
+    var ownMatrix = decodeMatrix(style);
+    var ownRot = decodeRotation(style);
+    // A mirrored transform (negative determinant) is not a rotation; its angle
+    // is meaningless on its own, so the matrix travels with the node instead.
+    var mirrored = !!ownMatrix && (ownMatrix[0] * ownMatrix[3] - ownMatrix[1] * ownMatrix[2]) < 0;
+    if (mirrored) ownRot = 0;
+
+    // Replace the rotated AABB with the real layout box, centred identically.
+    if (Math.abs(ownRot) > 0.01 && el.offsetWidth && el.offsetHeight) {
+      var ccx = rect.x + rect.width / 2, ccy = rect.y + rect.height / 2;
+      rect = { x: ccx - el.offsetWidth / 2, y: ccy - el.offsetHeight / 2, width: el.offsetWidth, height: el.offsetHeight };
+    }
+    // Page-space centre, before rebasing — rotation preserves it.
+    var pageCx = rect.x + rect.width / 2, pageCy = rect.y + rect.height / 2;
+    // Inside a rotated ancestor, express this box in that ancestor's unrotated frame.
+    if (frame) {
+      var u = unrotatePoint(pageCx, pageCy, frame.cx, frame.cy, frame.deg);
+      rect = { x: u.x - rect.width / 2, y: u.y - rect.height / 2, width: rect.width, height: rect.height };
+    }
+    // Figma nests, so a child already inherits its parent's spin: what it needs
+    // is its OWN rotation relative to that parent, which is exactly ownRot.
+    var netRot = ownRot;
     var hidden = style.visibility === 'hidden' || style.visibility === 'collapse';
     var opacity = parseFloat(style.opacity);
     if (isNaN(opacity)) opacity = 1;
@@ -608,6 +680,9 @@
       overflow: style.overflow,
       clipsContent: style.overflow === 'hidden' || style.overflow === 'clip' || style.overflowY === 'hidden',
       paints: paints,
+      rotation: Math.abs(netRot) > 0.01 ? Math.round(netRot * 100) / 100 : 0,
+      matrix: ownMatrix && (mirrored || Math.abs(netRot) > 0.01)
+        ? ownMatrix.map(function (v) { return Math.round(v * 10000) / 10000; }) : null,
       children: [],
     };
 
@@ -681,6 +756,7 @@
           path: node.path,
           rect: (cbox.width >= 1 && cbox.height >= 1) ? cbox : (ink || rect),
           inkRect: ink,
+          lines: ink && ink.lines ? ink.lines : 1,
           boxRect: rect,
           depth: depth,
           opacity: opacity,
@@ -690,6 +766,8 @@
           styleRuns: styleRunsFor(built.owners, baseFont, el),
           children: [],
         };
+        textNode.rotation = node.rotation;
+        textNode.matrix = node.matrix;
         if (el.tagName === 'A' && el.getAttribute('href')) textNode.href = absUrl(el.getAttribute('href'));
         if (before && before.content) textNode.before = before;
         if (after && after.content) textNode.after = after;
@@ -728,9 +806,16 @@
       }
     }
 
+    // Once a node carries the rotation, its subtree inherits it through nesting,
+    // so descendants are measured in this node's unrotated frame.
+    var childFrame = frame;
+    if (Math.abs(ownRot) > 0.01) {
+      childFrame = { cx: pageCx, cy: pageCy, deg: (frame ? frame.deg : 0) + ownRot };
+    }
+
     if (depth < MAX_DEPTH) {
       for (var c = 0; c < el.children.length; c++) {
-        var child = walk(el.children[c], depth + 1);
+        var child = walk(el.children[c], depth + 1, childFrame);
         if (child) node.children.push(child);
       }
     } else if (el.children.length) {
@@ -779,7 +864,7 @@
     return node;
   }
 
-  var root = walk(document.body, 0);
+  var root = walk(document.body, 0, null);
   if (root) { root = collapse(root); if (PRUNE) root = prune(root); }
 
   // Count what actually survived pruning — the walked total is just the budget.

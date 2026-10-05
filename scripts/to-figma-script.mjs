@@ -19,6 +19,13 @@
  *   --auto-layout        Apply auto-layout where the page used flex/grid
  *   --max-bytes <n>      Warn above this script size (default 49000)
  *   --inline-svg-max <n> Inline SVGs up to this many bytes (default 8000)
+ *   --split-frames WxH   Emit one Figma frame per node of that size (design boards)
+ *   --frame-names <file> JSON [{x,y,name,row,col}] naming/placing split frames
+ *   --grid-cols <n>      Columns when laying split frames out (default 6)
+ *   --grid-gap <n>       Horizontal gap between split frames (default 120)
+ *   --grid-row-gap <n>   Vertical gap between split frames (default 220)
+ *   --only <substr>      Emit only frames whose name contains this (repeatable)
+ *   --replace            Rebuild frames that already exist instead of skipping them
  *   --chunk-size <n>     Max nodes per section (default 350)
  *   --section-bytes <n>  Max payload bytes per section (default 38000; use_figma's limit is 50000 total)
  */
@@ -48,6 +55,13 @@ function parseArgs(argv) {
     else if (a === '--inline-svg-max') o.inlineSvgMax = Number(take());
     else if (a === '--chunk-size') o.chunkSize = Number(take());
     else if (a === '--section-bytes') o.sectionBytes = Number(take());
+    else if (a === '--split-frames') o.splitFrames = take();
+    else if (a === '--frame-names') o.frameNames = take();
+    else if (a === '--grid-cols') o.gridCols = Number(take());
+    else if (a === '--grid-gap') o.gridGap = Number(take());
+    else if (a === '--grid-row-gap') o.gridRowGap = Number(take());
+    else if (a === '--only') (o.only = o.only || []).push(take());
+    else if (a === '--replace') o.replace = true;
     else if (a === '-h' || a === '--help') o.help = true;
     else if (a.startsWith('-')) throw new Error(`Unknown option: ${a}`);
     else rest.push(a);
@@ -90,6 +104,30 @@ function splitUnits(node, max, out) {
   for (const k of node.children || []) splitUnits(k, max, out);
 }
 
+/**
+ * Find every node rendered at a given size — the design boards on an exploration
+ * canvas. Nested wrappers share their child's box, so keep the outermost match
+ * at each position and drop the duplicates beneath it.
+ */
+function findFramesBySize(tree, w, h, tol = 2) {
+  const hits = [];
+  (function walk(n) {
+    if (!n) return;
+    const r = n.rect || {};
+    if (Math.abs(r.width - w) <= tol && Math.abs(r.height - h) <= tol) hits.push(n);
+    for (const c of n.children || []) walk(c);
+  })(tree);
+  const seen = new Set();
+  const out = [];
+  for (const n of hits) {                       // document order = outermost first
+    const key = `${Math.round(n.rect.x)},${Math.round(n.rect.y)}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(n);
+  }
+  return out.sort((a, b) => a.rect.y - b.rect.y || a.rect.x - b.rect.x);
+}
+
 function unitsOf(tree, maxNodes) {
   const top = (tree.children && tree.children.length) ? tree.children : [tree];
   const units = [];
@@ -128,6 +166,8 @@ function compact(n, ctx) {
   const r = n.rect || { x: 0, y: 0, width: 0, height: 0 };
   const o = { n: (n.name || n.tag || 'Node').slice(0, 60), x: r2(r.x), y: r2(r.y), w: r2(Math.max(0, r.width)), h: r2(Math.max(0, r.height)) };
   if (n.opacity != null && n.opacity < 1) o.o = r2(n.opacity);
+  if (n.rotation) o.rot = r2(n.rotation);
+  if (n.matrix) o.m = n.matrix;
 
   switch (n.type) {
     case 'TEXT': {
@@ -142,6 +182,7 @@ function compact(n, ctx) {
       if (f.letterSpacing?.value) o.fo.ls = r2(f.letterSpacing.value);
       if (f.color) o.fo.c = rgb(f.color);
       if (f.color && f.color.a < 1) o.fo.ca = r2(f.color.a);
+      if (n.lines > 1) o.ln = n.lines;   // only multi-line text may wrap
       if (f.transform && f.transform !== 'none') o.fo.tc = f.transform;
       if (f.decoration && f.decoration !== 'none') o.fo.td = f.decoration;
       if (n.styleRuns?.length) {
@@ -308,7 +349,7 @@ const needed = new Map();
     }
     if (d.k) scan(d.k);
   }
-})(NODES);
+})(typeof NODES !== 'undefined' ? NODES : FRAMES.map(F => F.d));
 for (const f of needed.values()) {
   try { await figma.loadFontAsync(f); }
   catch (e) { warn.push('font load failed: ' + f.family + ' ' + f.style); }
@@ -359,9 +400,16 @@ function makeText(d) {
   if (d.fo.td === 'underline') t.textDecoration = 'UNDERLINE';
   else if (d.fo.td === 'line-through') t.textDecoration = 'STRIKETHROUGH';
 
-  // Fixed width + HEIGHT autoresize reproduces the page's line breaks.
-  if (d.w >= 1) { t.resize(Math.max(1, d.w), Math.max(1, d.h || 1)); t.textAutoResize = 'HEIGHT'; }
-  else t.textAutoResize = 'WIDTH_AND_HEIGHT';
+  // Text that rendered on ONE line in the browser must never wrap here: Figma's
+  // metrics run a hair wider than the browser's, so a box sized to the exact
+  // measured width re-wraps. Let it hug instead; multi-line text keeps the
+  // fixed width that reproduces its original line breaks.
+  if (!d.ln && d.w >= 1) {
+    t.textAutoResize = 'WIDTH_AND_HEIGHT';
+  } else if (d.w >= 1) {
+    t.resize(Math.max(1, d.w), Math.max(1, d.h || 1));
+    t.textAutoResize = 'HEIGHT';
+  } else t.textAutoResize = 'WIDTH_AND_HEIGHT';
 
   for (const r of d.ru || []) {
     const s = Math.max(0, Math.min(r.s, t.characters.length));
@@ -411,6 +459,28 @@ function build(d, parent, ox, oy) {
   parent.appendChild(node);
   node.x = d.x - ox;
   node.y = d.y - oy;
+  // CSS rotates clockwise, Figma counter-clockwise; set the matrix directly so
+  // the spin happens about the node's centre, as transform-origin defaults to.
+  if (d.m || d.rot) {
+    // CSS matrix(a,b,c,d) and Figma's relativeTransform share a y-down basis,
+    // so the linear part maps straight across — mirrors and all.
+    let a, b, c, dd;
+    if (d.m) { a = d.m[0]; b = d.m[1]; c = d.m[2]; dd = d.m[3]; }
+    else { const r = -d.rot * Math.PI / 180; a = Math.cos(r); b = -Math.sin(r); c = Math.sin(r); dd = Math.cos(r); }
+    const w = node.width, h = node.height;
+    const cx = (d.x - ox) + w / 2, cy = (d.y - oy) + h / 2;
+    node.relativeTransform = [
+      [a, c, cx - (a * w / 2 + c * h / 2)],
+      [b, dd, cy - (b * w / 2 + dd * h / 2)],
+    ];
+  }
+  // A hugged text box is narrower than the box it was measured in; keep the
+  // original alignment by re-anchoring against that measured width.
+  if (d.t === 'T' && !d.ln && d.w >= 1 && node.width < d.w) {
+    const al = d.fo && d.fo.al;
+    if (al === 'CENTER') node.x += (d.w - node.width) / 2;
+    else if (al === 'RIGHT' || al === 'END') node.x += (d.w - node.width);
+  }
   created.push(node.id);
 
   for (const k of d.k || []) build(k, node, d.x, d.y);
@@ -441,38 +511,43 @@ let pageCreated = false;
 if (!page) { page = figma.createPage(); page.name = FIGMA_PAGE; pageCreated = true; }
 if (figma.currentPage.id !== page.id) await figma.setCurrentPageAsync(page);
 
-// ---- root frame: reused across sections so the page builds up in place ----
-// Every viewport of the same website page lives here, side by side.
-let root = figma.currentPage.findOne(n => n.type === 'FRAME' && n.name === ROOT_NAME);
-if (!root) {
-  root = figma.createFrame();
-  root.name = ROOT_NAME;
-  root.resize(Math.max(1, PAGE.w), Math.max(1, PAGE.h));
-  if (PAGE.x === null) {
-    // Auto-place to the right of whatever is already on this page.
-    let right = null;
-    for (const c of figma.currentPage.children) {
-      if (c.id === root.id) continue;
-      right = right === null ? c.x + c.width : Math.max(right, c.x + c.width);
-    }
-    root.x = right === null ? 0 : right + 160;
-  } else root.x = PAGE.x;
-  root.y = PAGE.y;
-  root.fills = [solid(PAGE.bg, 1)];
-  root.clipsContent = true;
-  figma.currentPage.appendChild(root);
-  created.push(root.id);
+// ---- one artboard per design, placed on a grid -----------------------------
+// The node keeps its own paints and becomes the frame; its children rebase from
+// the node's page coordinates onto the frame's origin.
+const skipped = [];
+const replaced = [];
+function buildRootFrame(d, tx, ty) {
+  const f = figma.createFrame();
+  f.resize(Math.max(0.01, d.w), Math.max(0.01, d.h));
+  const p = paintsFor(d);
+  f.fills = p.length ? p : [];
+  applyBox(f, d);
+  f.name = d.n;
+  f.clipsContent = true;
+  figma.currentPage.appendChild(f);
+  f.x = tx; f.y = ty;
+  created.push(f.id);
+  for (const k of d.k || []) build(k, f, d.x, d.y);
+  return f;
 }
 
-for (const d of NODES) build(d, root, 0, 0);
+for (const F of FRAMES) {
+  const existing = figma.currentPage.findOne(n => n.type === 'FRAME' && n.name === F.d.n);
+  if (existing) {
+    // REPLACE_MODE rebuilds in place; otherwise an existing frame is left alone.
+    if (!REPLACE) { skipped.push(F.d.n); continue; }
+    existing.remove();
+    replaced.push(F.d.n);
+  }
+  buildRootFrame(F.d, F.tx, F.ty);
+}
 
 return {
-  section: SECTION,
+  chunk: SECTION,
   figmaPage: { name: page.name, id: page.id, created: pageCreated },
-  rootId: root.id,
-  rootName: ROOT_NAME,
-  rootX: root.x,
-  createdNodeIds: created.slice(0, 400),
+  framesBuilt: FRAMES.filter(F => !skipped.includes(F.d.n)).map(F => F.d.n),
+  framesSkipped: skipped,
+  framesReplaced: replaced,
   createdCount: created.length,
   fontWarnings: [...new Set(warn)].slice(0, 25),
 };
@@ -503,9 +578,84 @@ async function main() {
     if (txt.length <= args.inlineSvgMax) svgCache[a.file] = txt;
   }
 
+  const host = (() => { try { return new URL(data.meta.url).hostname.replace(/^www\./, ''); } catch { return 'page'; } })();
   const ctx = { assetsById, svgCache, autoLayout: !!args.autoLayout };
   const maxNodes = args.chunkSize || 350;
   const maxBytes = args.sectionBytes || 38000;  // use_figma caps `code` at 50000 chars; the runtime takes ~7.6KB
+
+  // ---- split-frames: one artboard per design board ------------------------
+  if (args.splitFrames) {
+    const m = String(args.splitFrames).match(/^(\d+)\s*[x×]\s*(\d+)$/i);
+    if (!m) { console.error(`--split-frames wants WxH, got "${args.splitFrames}"`); process.exit(2); }
+    const W = Number(m[1]), H = Number(m[2]);
+    const found = findFramesBySize(data.tree, W, H);
+    if (!found.length) { console.error(`No ${W}x${H} nodes found in ${file}.`); process.exit(2); }
+
+    const byPos = {};
+    if (args.frameNames) {
+      for (const e of JSON.parse(await readFile(resolve(args.frameNames), 'utf8'))) {
+        byPos[`${Math.round(e.x)},${Math.round(e.y)}`] = e;
+      }
+    }
+    const cols = args.gridCols || 6;
+    const gap = args.gridGap ?? 120;
+    const rowGap = args.gridRowGap ?? 220;
+
+    const frames = found.map((n, i) => {
+      const meta = byPos[`${Math.round(n.rect.x)},${Math.round(n.rect.y)}`] || {};
+      const col = meta.col != null ? meta.col : i % cols;
+      const row = meta.row != null ? meta.row : Math.floor(i / cols);
+      const d = compact(n, ctx);
+      d.n = meta.name || `${host} ${i + 1}`;
+      return { tx: col * (W + gap), ty: row * (H + rowGap), d, bytes: JSON.stringify(d).length, nodes: countNodes(n) };
+    });
+
+    const picked = args.only
+      ? frames.filter((f) => args.only.some((q) => f.d.n.toLowerCase().includes(q.toLowerCase())))
+      : frames;
+    if (!picked.length) { console.error(`--only matched no frame.`); process.exit(2); }
+    frames.length = 0; frames.push(...picked);
+
+    // Pack whole frames into chunks that fit use_figma's limit.
+    const chunks = [];
+    let bucket = [], bytes = 0;
+    for (const f of frames) {
+      if (bucket.length && bytes + f.bytes > maxBytes) { chunks.push(bucket); bucket = []; bytes = 0; }
+      bucket.push(f); bytes += f.bytes;
+    }
+    if (bucket.length) chunks.push(bucket);
+
+    if (args.list) {
+      console.log(JSON.stringify({
+        url: data.meta.url, matched: `${W}x${H}`, frames: frames.length, chunks: chunks.length,
+        note: 'Run one chunk per use_figma call, in order. Frames are idempotent by name.',
+        layout: frames.map((f) => ({ name: f.d.n, at: [f.tx, f.ty], nodes: f.nodes, bytes: f.bytes })),
+        chunkSizes: chunks.map((c, i) => ({ chunk: i, frames: c.map((f) => f.d.n), estScriptBytes: c.reduce((a, f) => a + f.bytes, 0) + 7800 })),
+      }, null, 2));
+      return;
+    }
+
+    const pick = args.sections ? chunks.filter((_, i) => args.sections.includes(i)) : chunks;
+    if (!pick.length) { console.error(`No chunk matched. There are ${chunks.length} (0-${chunks.length - 1}).`); process.exit(2); }
+    const payload = pick.flat().map((f) => ({ tx: f.tx, ty: f.ty, d: f.d }));
+
+    const hdr = `// figma-forge — ${data.meta.url}
+// split-frames ${W}x${H} · chunk ${JSON.stringify(args.sections || 'all')} of ${chunks.length} · ${payload.length} artboard(s)
+const SECTION = ${JSON.stringify(args.sections || 'all')};
+const FIGMA_PAGE = ${JSON.stringify(args.page || pageNameFromUrl(data.meta.url))};
+const REPLACE = ${args.replace ? 'true' : 'false'};
+const FRAMES = ${JSON.stringify(payload)};
+`;
+    const out = hdr + RUNTIME;
+    if (args.out) {
+      await writeFile(resolve(args.out), out, 'utf8');
+      process.stderr.write(`figma-forge: wrote ${resolve(args.out)} (${out.length} chars)\n`);
+    } else process.stdout.write(out);
+    if (out.length > args.maxBytes) {
+      process.stderr.write(`\nWARNING: ${out.length} chars — use_figma rejects code over 50000. Lower --section-bytes.\n`);
+    }
+    return;
+  }
 
   const makeUnit = (raw) => {
     const c = compact(raw, ctx);
@@ -546,7 +696,7 @@ async function main() {
   if (!pick.length) { console.error(`No sections matched. The page has ${sections.length} (0-${sections.length - 1}).`); process.exit(2); }
   const nodes = pick.flatMap((sec) => sec.units.map((u) => u.data));
 
-  const host = (() => { try { return new URL(data.meta.url).hostname.replace(/^www\./, ''); } catch { return 'page'; } })();
+
   const rootName = args.rootName || `${host} — ${data.meta.viewportPreset || 'desktop'}`;
   const figmaPage = args.page || pageNameFromUrl(data.meta.url);
   const bg = data.meta.background?.color || { r: 1, g: 1, b: 1 };
