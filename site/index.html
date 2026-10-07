@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark light">
+<title>Figma Forge — anything you can render, as editable Figma layers</title>
+
+
+<!-- Must stay classic and synchronous: theme before first paint, and scroll
+     forced to the top before the view transition snapshots the new page. -->
+<script>
+  (function () {
+    try { var t = localStorage.getItem('ff-theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+  })();
+  if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+  window.addEventListener('pagereveal', function () { window.scrollTo(0, 0); });
+</script>
+
+<meta name="description" content="Figma Forge reads a page's computed geometry out of a real browser and rebuilds it as editable Figma layers. Text stays text, vectors stay vectors. CLI today; Figma plugin, web app and agent access next.">
+<link rel="canonical" href="https://figma-forge-aviofla.vercel.app/">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="author" content="Nexprove">
+<meta name="theme-color" content="#0B0B0D" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#FBFBFA" media="(prefers-color-scheme: light)">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Figma Forge">
+<meta property="og:title" content="Figma Forge — anything you can render, as editable Figma layers">
+<meta property="og:description" content="Figma Forge reads a page's computed geometry out of a real browser and rebuilds it as editable Figma layers. Text stays text, vectors stay vectors. CLI today; Figma plugin, web app and agent access next.">
+<meta property="og:url" content="https://figma-forge-aviofla.vercel.app/">
+<meta property="og:image" content="https://figma-forge-aviofla.vercel.app/assets/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Figma Forge — anything you can render, as editable Figma layers">
+<meta property="og:locale" content="en_GB">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Figma Forge — anything you can render, as editable Figma layers">
+<meta name="twitter:description" content="Figma Forge reads a page's computed geometry out of a real browser and rebuilds it as editable Figma layers. Text stays text, vectors stay vectors. CLI today; Figma plugin, web app and agent access next.">
+<meta name="twitter:image" content="https://figma-forge-aviofla.vercel.app/assets/og.jpg">
+<meta name="twitter:image:alt" content="Figma Forge — anything you can render, as editable Figma layers">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Figma Forge",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "macOS, Linux, Windows",
+  "description": "Converts code, live URLs and AI-generated artifacts into editable Figma layers by reading computed geometry out of a real browser.",
+  "url": "https://figma-forge-aviofla.vercel.app/",
+  "image": "https://figma-forge-aviofla.vercel.app/assets/og.jpg",
+  "softwareVersion": "0.2.0",
+  "releaseNotes": "https://figma-forge-aviofla.vercel.app/releases.html",
+  "author": { "@type": "Organization", "name": "Nexprove" },
+  "publisher": { "@type": "Organization", "name": "Nexprove" },
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD", "availability": "https://schema.org/LimitedAvailability" }
+}
+</script>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 9.5V3h6.5M21 14.5V21h-6.5' stroke='%23F2F2EF' stroke-width='2.4' fill='none'/%3E%3Crect x='9' y='9' width='6' height='6' fill='%23FF6A2B'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=Azeret+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="board" aria-hidden="true"></div>
+
+<header class="bar">
+  <div class="in">
+    <a class="brand" href="index.html">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M3 9.5V3h6.5" stroke="currentColor" stroke-width="2"/>
+        <path d="M21 14.5V21h-6.5" stroke="currentColor" stroke-width="2"/>
+        <rect x="9" y="9" width="6" height="6" fill="#FF6A2B"/>
+      </svg>
+      <b>Figma Forge</b>
+      <span class="beta">BETA</span>
+    </a>
+    <nav>
+      <a href="index.html" aria-current="page">Overview</a>
+      <a href="install.html">Install</a>
+      <a href="releases.html">Releases</a>
+    </nav>
+    <button class="theme-btn" aria-label="Switch to light theme">
+      <svg class="i-moon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      <svg class="i-sun" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="main">
+
+  <!-- ===== HERO: one interactive widget, not a motif ===== -->
+  <section class="hero">
+    <div class="in hero-grid">
+      <div>
+        <h1>Anything you can render,<br><span class="l2">as editable Figma layers</span></h1>
+        <p class="lead">It opens your source in a real browser, reads the computed geometry off the layout engine, and rebuilds it through Figma's own API. Text stays text. Vectors stay vectors.</p>
+        <div class="acts">
+          <div class="cmdchip">
+            <code id="cmd-hero"><span class="p">$</span> npx figma-forge url stripe.com</code>
+            <button data-copy="cmd-hero" aria-label="Copy install command">copy</button>
+          </div>
+          <button class="btn btn-pri" data-open-beta>Request access</button>
+        </div>
+        <p class="hint">Hover the canvas. Every layer is still a layer.</p>
+      </div>
+
+      <div class="stage-wrap">
+        <div class="stage-chrome">
+          <span class="d"></span><span class="d"></span><span class="d"></span>
+          <span class="u">acme.com</span>
+          <span class="mode">inspecting</span>
+        </div>
+        <div class="stage" id="stage">
+          <div class="mock">
+            <div class="mock-row" data-layer="Nav">
+              <div class="mock-logo" data-layer="Logo"></div>
+              <div class="mock-nav"><span></span><span></span><span></span></div>
+            </div>
+            <div class="mock-h" data-layer="Heading" data-agent="1">Ship the thing you already designed</div>
+            <div class="mock-p" data-layer="Body">One source of truth, from the browser into the file your team actually opens.</div>
+            <div class="mock-cta" data-layer="Actions">
+              <div class="mock-btn" data-layer="Button / Primary" data-agent="1"></div>
+              <div class="mock-btn ghost"></div>
+            </div>
+            <div class="mock-cards" data-layer="Cards" data-agent="1">
+              <div class="mock-card" data-layer="Card" data-agent="1"><div class="bar7"></div><div class="bar8"></div></div>
+              <div class="mock-card"><div class="bar7"></div><div class="bar8"></div></div>
+              <div class="mock-card"><div class="bar7"></div><div class="bar8"></div></div>
+            </div>
+          </div>
+
+          <!-- selection chrome -->
+          <div class="sel-box" id="selbox" aria-hidden="true">
+            <i></i><i></i><i></i><i></i>
+            <span class="sel-name" id="selname"></span>
+            <span class="sel-dim" id="seldim"></span>
+          </div>
+          <div class="snapline v" id="snapv" aria-hidden="true"></div>
+          <div class="snapline h" id="snaph" aria-hidden="true"></div>
+
+          <!-- two cursors: yours, and an agent working the same file -->
+          <div class="cursors" id="cursors" aria-hidden="true">
+            <div class="cur cur-you" id="cur-you" style="opacity:0">
+              <svg width="20" height="30" viewBox="0 0 24 36" fill="none"><path d="M5.65 12.37H5.46l-.14.13L.5 16.88V1.2l11.28 11.17H5.65z" fill="#35D6F5" stroke="#fff" stroke-width="1.2"/></svg>
+              <span class="tag" style="background:#35D6F5;color:#06222B">you</span>
+            </div>
+            <div class="cur cur-peer" id="cur-peer">
+              <svg width="20" height="30" viewBox="0 0 24 36" fill="none"><path d="M5.65 12.37H5.46l-.14.13L.5 16.88V1.2l11.28 11.17H5.65z" fill="#FF6A2B" stroke="#fff" stroke-width="1.2"/></svg>
+              <span class="tag mono" style="background:#FF6A2B;color:#1A0800">forge</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- the tree is bound to the same nodes, both directions -->
+        <div class="tree">
+          <div class="tree-head"><h3 style="font-size:13px">Layers</h3><span>recovered, not flattened</span></div>
+          <ul>
+            <li><button data-target="Nav"><svg class="ic" width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1" y="1" width="10" height="10"/></svg>Nav<span class="wh"></span></button></li>
+            <li><button class="d1" data-target="Logo"><svg class="ic" width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M6 1l5 10H1z"/></svg>Logo<span class="wh"></span></button></li>
+            <li><button data-target="Heading"><svg class="ic" width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 2h8M6 2v8"/></svg>Heading<span class="wh"></span></button></li>
+            <li><button data-target="Body"><svg class="ic" width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 2h8M6 2v8"/></svg>Body<span class="wh"></span></button></li>
+            <li><button data-target="Actions"><svg class="ic" width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1" y="1" width="10" height="10"/></svg>Actions<span class="wh"></span></button></li>
+            <li><button class="d1" data-target="Button / Primary"><svg class="ic" width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1" y="3" width="10" height="6" rx="2"/></svg>Button / Primary<span class="wh"></span></button></li>
+            <li><button data-target="Cards"><svg class="ic" width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1" y="1" width="10" height="10"/></svg>Cards<span class="wh"></span></button></li>
+            <li><button class="d1" data-target="Card"><svg class="ic" width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1" y="1" width="10" height="10" rx="2"/></svg>Card<span class="wh"></span></button></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== measured, not claimed ===== -->
+  <section style="padding-block:0 96px">
+    <div class="in">
+      <div class="stats">
+        <div><span class="k">Artboards built</span><span class="v">93</span></div>
+        <div><span class="k">Font substitutions</span><span class="v">0</span></div>
+        <div><span class="k">Largest board</span><span class="v">2560×1440</span></div>
+        <div><span class="k">Smallest board</span><span class="v">16×16</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== four surfaces ===== -->
+  <section id="surfaces">
+    <div class="in">
+      <span class="kicker"><b>Surfaces</b> &nbsp;/&nbsp; one engine, four ways to reach it</span>
+      <h2>Use it however you work</h2>
+      <p class="lead" style="margin-bottom:32px">A terminal today. A Figma panel, a browser app, and a tool your agent can call — next.</p>
+
+      <div class="ifaces">
+        <div class="iftabs" role="tablist" aria-label="Interfaces">
+          <button class="iftab" role="tab" data-if="cli" aria-selected="true" aria-controls="p-cli">Command line<span class="st live">LIVE</span></button>
+          <button class="iftab" role="tab" data-if="plugin" aria-selected="false" aria-controls="p-plugin">Figma plugin<span class="st soon">SOON</span></button>
+          <button class="iftab" role="tab" data-if="web" aria-selected="false" aria-controls="p-web">Web app<span class="st soon">SOON</span></button>
+          <button class="iftab" role="tab" data-if="agent" aria-selected="false" aria-controls="p-agent">Your agent<span class="st live">LIVE</span></button>
+        </div>
+
+        <div>
+          <div class="ifpanel" id="p-cli" data-ifpanel="cli" role="tabpanel">
+            <h3>One command, one file</h3>
+            <p>Point it at a URL, a path in your repo, or an artifact. It reports what it built and what it couldn't translate.</p>
+            <div class="term">
+              <div class="tbar"><span class="d"></span><span class="d"></span><span class="d"></span><span class="n">zsh</span></div>
+              <pre id="term-out" aria-hidden="true"></pre>
+            </div>
+          </div>
+
+          <div class="ifpanel" id="p-plugin" data-ifpanel="plugin" role="tabpanel" hidden>
+            <h3>Import without leaving Figma</h3>
+            <p>Paste a URL in the panel, choose a viewport, and the frames land on your canvas.</p>
+            <div class="surf">
+              <div class="sh"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" stroke-width="2"/></svg><b>Figma Forge</b><span class="sp">plugin</span></div>
+              <div class="sb">
+                <div class="field"><label>Source</label><div class="fake">https://stripe.com/pricing</div></div>
+                <div class="field"><label>Viewports</label><div class="chips"><span class="chip on">1440</span><span class="chip on">768</span><span class="chip">390</span></div></div>
+                <div class="field"><label>Options</label><div class="chips"><span class="chip on">auto-layout</span><span class="chip on">variables</span><span class="chip">components</span></div></div>
+                <div class="go">Import 2 frames</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ifpanel" id="p-web" data-ifpanel="web" role="tabpanel" hidden>
+            <h3>Nothing to install</h3>
+            <p>Drop a URL or a file in the browser, pick the destination file, and watch it build.</p>
+            <div class="surf">
+              <div class="sh"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/></svg><b>forge.app</b><span class="sp">web</span></div>
+              <div class="sb">
+                <div class="field"><label>Paste, drop, or pick a repo</label><div class="fake">acme.com &nbsp;·&nbsp; pricing-page.html &nbsp;·&nbsp; ~/acme/web</div></div>
+                <div class="field"><label>Destination</label><div class="fake">Acme — Design System &nbsp;/&nbsp; Imports</div></div>
+                <div class="field"><label>Queue</label><div class="chips"><span class="chip on">3 done</span><span class="chip">1 running</span></div></div>
+                <div class="go">Build into Figma</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ifpanel" id="p-agent" data-ifpanel="agent" role="tabpanel" hidden>
+            <h3>Hand it to your agent</h3>
+            <p>It ships as a skill and an MCP tool, so Claude or any MCP client can run the whole pipeline on your behalf — and decide how a page should be split into boards.</p>
+            <div class="surf">
+              <div class="sh"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h10M4 17h7" stroke="currentColor" stroke-width="2"/></svg><b>agent session</b><span class="sp">mcp</span></div>
+              <div class="sb">
+                <div class="field"><label>You</label><div class="fake">Put our pricing page in the design file</div></div>
+                <div class="field"><label>Tool call</label><div class="fake">figma_forge.import_from_url(url, fileKey)</div></div>
+                <div class="field"><label>Result</label><div class="fake">7 frames &nbsp;·&nbsp; 2 warnings &nbsp;·&nbsp; node-id=12-2</div></div>
+                <div class="field"><label>Surfaces</label><div class="chips"><span class="chip on">skill</span><span class="chip on">mcp</span><span class="chip">http</span></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== fidelity, shown not listed ===== -->
+  <section>
+    <div class="in">
+      <span class="kicker"><b>Fidelity</b> &nbsp;/&nbsp; what crosses over, and what doesn't</span>
+      <h2>Honest about the edges</h2>
+      <p class="lead" style="margin-bottom:32px">Most of CSS has a native Figma equivalent. Some of it doesn't, and we'd rather show you which.</p>
+      <div class="specs">
+        <div class="spec">
+          <div class="demo"><span class="sw-txt">Aa</span></div>
+          <div class="lbl"><b>Text</b><span class="tagy">EDITABLE</span></div>
+          <p>Stays text, in the right family and weight.</p>
+        </div>
+        <div class="spec">
+          <div class="demo"><svg width="40" height="40" viewBox="0 0 24 24" fill="none"><path d="M3 9.5V3h6.5M21 14.5V21h-6.5" stroke="var(--sel)" stroke-width="2"/><rect x="9" y="9" width="6" height="6" fill="var(--act)"/></svg></div>
+          <div class="lbl"><b>SVG</b><span class="tagy">VECTOR</span></div>
+          <p>Becomes real paths you can pick apart.</p>
+        </div>
+        <div class="spec">
+          <div class="demo"><div class="sw-grad"></div></div>
+          <div class="lbl"><b>Gradients</b><span class="tagy">NATIVE</span></div>
+          <p>Linear, radial and angular map across.</p>
+        </div>
+        <div class="spec">
+          <div class="demo"><div class="sw-rad"></div></div>
+          <div class="lbl"><b>Radii &amp; borders</b><span class="tagy">NATIVE</span></div>
+          <p>Per corner, per side, plus shadows.</p>
+        </div>
+        <div class="spec">
+          <div class="demo"><span class="sw-rot">11°</span></div>
+          <div class="lbl"><b>Transforms</b><span class="tagy">REAL</span></div>
+          <p>Rotation and mirroring, not baked pixels.</p>
+        </div>
+        <div class="spec">
+          <div class="demo"><div class="sw-blur"></div></div>
+          <div class="lbl"><b>Filters</b><span class="tagn">DROPPED</span></div>
+          <p>Blur, blend modes and masks don't cross.</p>
+        </div>
+        <div class="spec">
+          <div class="demo"><span class="sw-ph">&lt;canvas&gt;</span></div>
+          <div class="lbl"><b>Canvas &amp; video</b><span class="tagn">PLACEHOLDER</span></div>
+          <p>Arrives as a named, sized placeholder.</p>
+        </div>
+        <div class="spec">
+          <div class="demo"><span class="mono" style="font-size:11px;color:var(--faint)">:hover</span></div>
+          <div class="lbl"><b>States</b><span class="tagn">ONE PER RUN</span></div>
+          <p>A hover or open state needs its own pass.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== showcase ===== -->
+  <section id="work">
+    <div class="in">
+      <span class="kicker"><b>Work</b> &nbsp;/&nbsp; exported boards, and sources queued up</span>
+      <h2>Files it has made, and what's next in</h2>
+      <p class="lead" style="margin-bottom:32px">The first two are real output, still editable in Figma. The other two are live sites waiting their turn.</p>
+      <div class="show">
+        <div class="work">
+          <div class="img"><img src="assets/showcase-series.jpg" alt="A Tech Ember Fest social poster exported to Figma as editable layers" loading="lazy" width="576" height="720"></div>
+          <div class="meta">
+            <div class="t"><b>Tech Ember Fest</b><span class="tagy">EXPORTED</span></div>
+            <p>A content series in portrait and square. 18 boards, type and vectors intact.</p>
+          </div>
+        </div>
+        <div class="work">
+          <div class="img"><img src="assets/showcase-cover.jpg" alt="A Tech Ember Fest event cover exported to Figma as editable layers" loading="lazy" width="860" height="451"></div>
+          <div class="meta">
+            <div class="t"><b>Tech Ember — Brand Kit</b><span class="tagy">EXPORTED</span></div>
+            <p>Favicon to channel art. 30 boards, each at its native export size.</p>
+          </div>
+        </div>
+        <div class="work">
+          <div class="img"><img src="assets/showcase-gosolar.jpg" alt="The Solar Builders NG homepage, a source site queued for import" loading="lazy" width="760" height="570"></div>
+          <div class="meta">
+            <div class="t"><b>Go Solar Me</b><span class="chip">SOURCE</span></div>
+            <p>A live storefront with no design file behind it. Next in the queue.</p>
+          </div>
+        </div>
+        <div class="work">
+          <div class="img"><img src="assets/showcase-ellum.jpg" alt="The Ellum.ai homepage, a source site queued for import" loading="lazy" width="760" height="570"></div>
+          <div class="meta">
+            <div class="t"><b>Ellum AI</b><span class="chip">SOURCE</span></div>
+            <p>Dark product marketing, headed for a shared Figma library.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== roadmap ===== -->
+  <section id="next">
+    <div class="in">
+      <span class="kicker"><b>Roadmap</b> &nbsp;/&nbsp; what's coming</span>
+      <h2>Where it's going</h2>
+      <div class="road" style="margin-top:28px">
+        <div class="ritem"><span class="when now">SHIPPING</span><div><h4>One call, one URL</h4><p>A single entry point that works out whether it's a board canvas or a page, and builds — no decisions along the way.</p></div></div>
+        <div class="ritem"><span class="when next">NEXT</span><div><h4>Figma plugin</h4><p>Import from inside Figma, with a viewport picker and multi-frame output.</p></div></div>
+        <div class="ritem"><span class="when next">NEXT</span><div><h4>Warnings that mean something</h4><p>Every quiet translation failure reported as structured output, so a build can be trusted without someone eyeballing it.</p></div></div>
+        <div class="ritem"><span class="when later">LATER</span><div><h4>Round-tripping</h4><p>Figma edits flowing back as updated code or tokens. The build is already idempotent by frame name, which is the groundwork.</p></div></div>
+        <div class="ritem"><span class="when later">LATER</span><div><h4>Design systems, not artboards</h4><p>Land variables, text styles and components instead of a pile of frames.</p></div></div>
+        <div class="ritem"><span class="when later">LATER</span><div><h4>Components from repeats</h4><p>Spot a repeated card or row and build it once as a component with instances.</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== access ===== -->
+  <section id="access">
+    <div class="in">
+      <div class="band">
+        <div class="bt">
+          <span class="kicker"><b>Beta</b> &nbsp;/&nbsp; limited access</span>
+          <h2>Try it on your own file</h2>
+          <p>We're taking a few people at a time so we can fix what breaks before the next batch.</p>
+        </div>
+        <button class="btn btn-pri" data-open-beta>Request access</button>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="in">
+    <a class="brand" href="index.html">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M3 9.5V3h6.5" stroke="currentColor" stroke-width="2"/>
+        <path d="M21 14.5V21h-6.5" stroke="currentColor" stroke-width="2"/>
+        <rect x="9" y="9" width="6" height="6" fill="#FF6A2B"/>
+      </svg>
+      <b>Figma Forge</b>
+    </a>
+    <nav>
+      <a href="install.html">Install</a>
+      <a href="releases.html">Releases</a>
+      <a href="#access">Access</a>
+    </nav>
+    <span class="co">Nexprove</span>
+  </div>
+</footer>
+
+<dialog class="sheet" id="beta" aria-labelledby="beta-t">
+  <div class="sheet-top">
+    <div>
+      <h2 id="beta-t">Request access</h2>
+      <p>Tell us what you'd point it at first.</p>
+    </div>
+    <button class="sheet-x" data-close-beta aria-label="Close">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg>
+    </button>
+  </div>
+  <div class="sheet-body">
+    <div class="status" id="beta-status" role="status" aria-live="polite"></div>
+    <form class="beta" id="beta-form" novalidate>
+      <div class="row">
+        <div class="fr"><label for="f-name">Name</label><input id="f-name" name="name" type="text" autocomplete="name"></div>
+        <div class="fr"><label for="f-email">Email</label><input id="f-email" name="email" type="email" autocomplete="email" inputmode="email"></div>
+      </div>
+      <div class="fr">
+        <label for="f-use">What would you import first?</label>
+        <select id="f-use" name="use">
+          <option>A live site we have no design files for</option>
+          <option>Our own app, from the repo</option>
+          <option>AI-generated screens that need real layers</option>
+          <option>A design system we want as Figma variables</option>
+          <option>Something else</option>
+        </select>
+      </div>
+      <div class="fr"><label for="f-note">Anything it should do that it doesn't? (optional)</label><textarea id="f-note" name="note" placeholder="Feature requests, gripes, the thing that would make you switch."></textarea></div>
+      <button class="btn btn-pri" type="submit" style="justify-self:start">Send request</button>
+      <p class="formnote">No server on the other end yet — this keeps your request in your own browser so nothing is transmitted.</p>
+    </form>
+  </div>
+</dialog>
+
+<script src="assets/app.js"></script>
+</body>
+</html>

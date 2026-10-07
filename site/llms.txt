@@ -1,0 +1,71 @@
+# Figma Forge
+
+> Converts code, live URLs and AI-generated artifacts into editable Figma layers.
+> It renders the source in headless Chrome, reads computed geometry off the layout
+> engine, and rebuilds it through Figma's Plugin API. Not a screenshot, not a trace.
+> By Nexprove. Currently in beta at version 0.2.0.
+
+## What it does
+
+- **Code to Figma** — push a page, screen or component out of a repo, laid out as it actually renders.
+- **Live URL to Figma** — capture any site's real type, spacing, colour and assets as an editable design.
+- **Artifact to Figma** — pull the boards out of an AI-generated artifact, one named artboard each, at native export sizes.
+- **Design tokens** — derive Figma variables and text styles: colour ramps, type scale, spacing, radii, light and dark modes.
+
+## How a build runs
+
+1. Render — headless Chrome loads the source and lays it out for real.
+2. Extract — walk the DOM for computed geometry, paints, type and assets.
+3. Translate — map CSS onto native Figma properties instead of flattening it.
+4. Build — construct through the Plugin API, keyed on frame names.
+
+Builds are idempotent by frame name: a second run reconciles rather than duplicating, so one board can be re-exported without disturbing the rest.
+
+## Interfaces
+
+- **Command line** — available now. Runs as a Claude Code plugin; the Figma connection is bundled.
+- **Figma plugin** — planned. Import from inside Figma with a viewport picker.
+- **Web app** — planned. Drop a URL or file in the browser.
+- **Agent access** — available now as a skill and an MCP tool, so an AI assistant can run the pipeline.
+
+## What crosses over
+
+Carried: inline SVG becomes editable vector paths; text stays text in the right family and weight; gradients, per-corner radii, per-side borders and shadows map to native properties; rotation and mirroring arrive as real transforms; raster images upload as fills.
+
+Not carried: CSS filters, blend modes and masks. `canvas`, `video` and `iframe` content becomes a named placeholder. One state per capture — a hover or open state needs its own run.
+
+## Known issues in 0.2.0
+
+Three defects fail quietly, meaning a run reports success and leaves a file that looks finished:
+
+1. A fresh build can undo the line-break fix — the generated runtime gives multi-line text a fixed width even when breaks are pinned, so Figma re-wraps it.
+2. Rectangles with no source fill keep Figma's default `#D9D9D9`, so outlines and dividers arrive as solid grey blocks.
+3. SVG references to definitions outside the icon's own `<svg>` root are dropped, so masked icons render solid and `<use>` sprites come through empty.
+
+Partial: text shadows are not captured, and Figma caps drop shadows at eight per node and truncates silently. Repeating gradients flatten to a single band.
+
+## Requirements
+
+- Claude Code
+- Node (nothing to npm install; uses built-in fetch and WebSocket)
+- Google Chrome or Chromium on the machine
+- A Figma account with a **Full seat** on the destination team. A View or Dev seat can read a file but never build into it.
+
+## Install
+
+```
+/plugin marketplace add nexlabz/figma-forge
+/plugin install figma-forge@figma-forge
+```
+
+Then sign in to Figma once via `/mcp` → figma → Authenticate.
+
+## Pages
+
+- [Overview](https://figma-forge-aviofla.vercel.app/): what it does, the four interfaces, fidelity details
+- [Install](https://figma-forge-aviofla.vercel.app/install.html): prerequisites, steps, troubleshooting
+- [Releases](https://figma-forge-aviofla.vercel.app/releases.html): changelog and the full known-issues list
+
+## Status
+
+Beta. Access is limited and granted in small batches. Request access from the overview page.
