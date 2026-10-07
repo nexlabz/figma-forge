@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark light">
+<title>Install — Figma Forge</title>
+
+<script>
+  (function () {
+    try { var t = localStorage.getItem('ff-theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+  })();
+  if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+  window.addEventListener('pagereveal', function () { window.scrollTo(0, 0); });
+</script>
+<meta name="description" content="Two commands and one Figma sign-in. Prerequisites, the install steps, and the five errors people actually hit.">
+<link rel="canonical" href="https://figma-forge-aviofla.vercel.app/install.html">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="author" content="Nexprove">
+<meta name="theme-color" content="#0B0B0D" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#FBFBFA" media="(prefers-color-scheme: light)">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Figma Forge">
+<meta property="og:title" content="Install Figma Forge">
+<meta property="og:description" content="Two commands and one Figma sign-in. Prerequisites, the install steps, and the five errors people actually hit.">
+<meta property="og:url" content="https://figma-forge-aviofla.vercel.app/install.html">
+<meta property="og:image" content="https://figma-forge-aviofla.vercel.app/assets/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Figma Forge — anything you can render, as editable Figma layers">
+<meta property="og:locale" content="en_GB">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Install Figma Forge">
+<meta name="twitter:description" content="Two commands and one Figma sign-in. Prerequisites, the install steps, and the five errors people actually hit.">
+<meta name="twitter:image" content="https://figma-forge-aviofla.vercel.app/assets/og.jpg">
+<meta name="twitter:image:alt" content="Figma Forge — anything you can render, as editable Figma layers">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 9.5V3h6.5M21 14.5V21h-6.5' stroke='%23F2F2EF' stroke-width='2.4' fill='none'/%3E%3Crect x='9' y='9' width='6' height='6' fill='%23FF6A2B'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=Azeret+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="board" aria-hidden="true"></div>
+
+<header class="bar">
+  <div class="in">
+    <a class="brand" href="index.html">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 9.5V3h6.5" stroke="currentColor" stroke-width="2"/><path d="M21 14.5V21h-6.5" stroke="currentColor" stroke-width="2"/><rect x="9" y="9" width="6" height="6" fill="#FF6A2B"/></svg>
+      <b>Figma Forge</b><span class="beta">BETA</span>
+    </a>
+    <nav>
+      <a href="index.html">Overview</a>
+      <a href="install.html" aria-current="page">Install</a>
+      <a href="releases.html">Releases</a>
+    </nav>
+    <button class="theme-btn" aria-label="Switch to light theme">
+      <svg class="i-moon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      <svg class="i-sun" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="main">
+  <section style="padding-block:68px 40px">
+    <div class="in">
+      <span class="kicker"><b>Install</b> &nbsp;/&nbsp; about three minutes</span>
+      <h1 style="font-size:clamp(32px,4.4vw,52px)">Two commands and<br><span style="color:var(--faint)">one Figma sign-in</span></h1>
+      <p class="lead" style="margin-top:18px">No account to create, nothing to upload. It writes straight into a file you already have open.</p>
+      <div class="acts" style="margin-top:24px">
+        <div class="cmdchip">
+          <code id="c-1"><span class="p">$</span> /plugin marketplace add nexlabz/figma-forge</code>
+          <button data-copy="c-1" aria-label="Copy command">copy</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding-block:0 56px">
+    <div class="in">
+      <div class="callout">
+        <h4>Four things need to be true</h4>
+        <ul>
+          <li><b>Claude Code</b> — Figma Forge runs as a plugin inside it.</li>
+          <li><b>Node</b> — nothing to <code class="i">npm install</code>; the scripts use Node's built-in fetch and WebSocket.</li>
+          <li><b>Chrome or Chromium</b> on the machine. The extractor drives it over the DevTools Protocol.</li>
+          <li><b>A Figma Full seat</b> on the team you're writing into. A View or Dev seat can read a file but never build into it.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding-block:0 96px">
+    <div class="in">
+      <div class="steps">
+
+        <div class="sstep">
+          <div class="bd">
+            <h3>Add the plugin</h3>
+            <p>One command adds the marketplace, one installs it. The Figma connection comes bundled.</p>
+            <div class="term">
+              <div class="tbar"><span class="d"></span><span class="d"></span><span class="d"></span><span class="n">claude code</span></div>
+              <pre id="c-2"><span class="p">$</span> /plugin marketplace add nexlabz/figma-forge
+<span class="p">$</span> /plugin install figma-forge@figma-forge</pre>
+            </div>
+            <div class="cmdchip"><code>copy both lines</code><button data-copy="c-2" aria-label="Copy both commands">copy</button></div>
+          </div>
+        </div>
+
+        <div class="sstep">
+          <div class="bd">
+            <h3>Sign in to Figma, once</h3>
+            <p>Run <code class="i">/mcp</code>, pick <b>figma</b>, choose Authenticate. It opens Figma in your browser for a one-time approval.</p>
+            <p>Make sure the browser is already signed in as the account you want — the approval follows whichever session is live there, not whichever you meant.</p>
+          </div>
+        </div>
+
+        <div class="sstep">
+          <div class="bd">
+            <h3>Point it at something</h3>
+            <p>The file key is the segment after <code class="i">/design/</code> in your Figma URL.</p>
+            <div class="term">
+              <div class="tbar"><span class="d"></span><span class="d"></span><span class="d"></span><span class="n">first import</span></div>
+              <pre id="c-3"><span class="p">$</span> /figma-forge:url-to-figma https://stripe.com
+<span class="p">$</span> /figma-forge:code-to-figma src/app/pricing/page.tsx
+<span class="p">$</span> /figma-forge:artifact-to-figma https://claude.ai/artifact/&lt;id&gt;</pre>
+            </div>
+            <div class="cmdchip"><code>copy all three</code><button data-copy="c-3" aria-label="Copy the example commands">copy</button></div>
+          </div>
+        </div>
+
+        <div class="sstep">
+          <div class="bd">
+            <h3>Turn values into variables</h3>
+            <p>Optional. Once a source is extracted, derive Figma variables and text styles instead of hardcoded fills — colour ramps, type scale, spacing, radii, light and dark.</p>
+            <div class="cmdchip"><code id="c-4"><span class="p">$</span> /figma-forge:tokens</code><button data-copy="c-4" aria-label="Copy command">copy</button></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <section style="padding-block:0 96px">
+    <div class="in">
+      <span class="kicker"><b>Troubleshooting</b> &nbsp;/&nbsp; the five real ones</span>
+      <h2>When it doesn't work</h2>
+      <div class="known" style="margin-top:26px">
+        <div class="kitem"><span class="tagn">CHROME</span><p><b>spawn google-chrome ENOENT.</b> No browser found. Set <code class="i">CHROME_PATH</code> to your Chrome executable.</p></div>
+        <div class="kitem"><span class="tagn">SEAT</span><p><b>Can't call createPage in read-only mode.</b> The account can read the file but not write. You need edit access <em>and</em> a Full seat — this fails <em>after</em> a clean sign-in, which makes it look like something else.</p></div>
+        <div class="kitem"><span class="tagn">ACCOUNT</span><p><b>No edit access to this file.</b> Either it isn't shared with the signed-in account, or you're signed in as a different one. Check <code class="i">/mcp</code> before re-sharing anything.</p></div>
+        <div class="kitem"><span class="tagn">LAYOUT</span><p><b>The page came out reflowed.</b> The capture viewport was narrower than the source's own stage. A board canvas often needs 3000px, not a device width.</p></div>
+        <div class="kitem"><span class="tagn">CAPTURE</span><p><b>The reference screenshot is black below the fold.</b> Chrome caps full-page capture at 16000px. The extracted design is complete; only the reference image is clipped.</p></div>
+      </div>
+      <p style="margin-top:26px"><a href="releases.html">Known issues in the current release &rarr;</a></p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="in">
+    <a class="brand" href="index.html"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 9.5V3h6.5" stroke="currentColor" stroke-width="2"/><path d="M21 14.5V21h-6.5" stroke="currentColor" stroke-width="2"/><rect x="9" y="9" width="6" height="6" fill="#FF6A2B"/></svg><b>Figma Forge</b></a>
+    <nav><a href="index.html">Overview</a><a href="releases.html">Releases</a><a href="index.html#access">Access</a></nav>
+    <span class="co">Nexprove</span>
+  </div>
+</footer>
+
+<script src="assets/app.js"></script>
+</body>
+</html>
