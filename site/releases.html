@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark light">
+<title>Releases — Figma Forge</title>
+
+<script>
+  (function () {
+    try { var t = localStorage.getItem('ff-theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+  })();
+  if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+  window.addEventListener('pagereveal', function () { window.scrollTo(0, 0); });
+</script>
+<meta name="description" content="What shipped in Figma Forge, the three defects that fail quietly, and what's coming next.">
+<link rel="canonical" href="https://figma-forge-aviofla.vercel.app/releases.html">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="author" content="Nexprove">
+<meta name="theme-color" content="#0B0B0D" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#FBFBFA" media="(prefers-color-scheme: light)">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Figma Forge">
+<meta property="og:title" content="Figma Forge releases and known issues">
+<meta property="og:description" content="What shipped in Figma Forge, the three defects that fail quietly, and what's coming next.">
+<meta property="og:url" content="https://figma-forge-aviofla.vercel.app/releases.html">
+<meta property="og:image" content="https://figma-forge-aviofla.vercel.app/assets/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Figma Forge — anything you can render, as editable Figma layers">
+<meta property="og:locale" content="en_GB">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Figma Forge releases and known issues">
+<meta name="twitter:description" content="What shipped in Figma Forge, the three defects that fail quietly, and what's coming next.">
+<meta name="twitter:image" content="https://figma-forge-aviofla.vercel.app/assets/og.jpg">
+<meta name="twitter:image:alt" content="Figma Forge — anything you can render, as editable Figma layers">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 9.5V3h6.5M21 14.5V21h-6.5' stroke='%23F2F2EF' stroke-width='2.4' fill='none'/%3E%3Crect x='9' y='9' width='6' height='6' fill='%23FF6A2B'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=Azeret+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="board" aria-hidden="true"></div>
+
+<header class="bar">
+  <div class="in">
+    <a class="brand" href="index.html">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 9.5V3h6.5" stroke="currentColor" stroke-width="2"/><path d="M21 14.5V21h-6.5" stroke="currentColor" stroke-width="2"/><rect x="9" y="9" width="6" height="6" fill="#FF6A2B"/></svg>
+      <b>Figma Forge</b><span class="beta">BETA</span>
+    </a>
+    <nav>
+      <a href="index.html">Overview</a>
+      <a href="install.html">Install</a>
+      <a href="releases.html" aria-current="page">Releases</a>
+    </nav>
+    <button class="theme-btn" aria-label="Switch to light theme">
+      <svg class="i-moon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      <svg class="i-sun" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="main">
+  <section style="padding-block:68px 44px">
+    <div class="in">
+      <span class="kicker"><b>Releases</b> &nbsp;/&nbsp; and the known-issues list</span>
+      <h1 style="font-size:clamp(32px,4.4vw,52px)">What shipped,<br><span style="color:var(--faint)">and what's still wrong</span></h1>
+      <p class="lead" style="margin-top:18px">It's young enough that the second list matters more than the first. Both live here.</p>
+    </div>
+  </section>
+
+  <section style="padding-block:0 88px">
+    <div class="in">
+      <div class="rel">
+
+        <article>
+          <div class="vm">
+            <span class="v">0.2.0</span>
+            <time datetime="2026-10-06">06 Oct 2026</time>
+            <span class="tagy">CURRENT</span>
+          </div>
+          <div>
+            <h3>Artifact import, and line breaks that hold</h3>
+            <p>Made AI-generated artifacts a first-class source, and fixed the thing that quietly ruined text on every build before it.</p>
+            <div class="grp">
+              <span class="gh">ADDED</span>
+              <ul>
+                <li><b>Artifact import</b> — one artboard per board, named from the board's own label, at its native export size.</li>
+                <li><b>Notes columns</b> carried across with the boards they annotate.</li>
+                <li><b>Marketplace manifest</b>, so it installs with one command instead of a clone.</li>
+                <li><b>Mixed-size canvases</b> split from a measured rect list, so a sheet where every tile differs builds in one pass.</li>
+              </ul>
+            </div>
+            <div class="grp">
+              <span class="gh">FIXED</span>
+              <ul>
+                <li><b>Pinned line breaks.</b> Figma's font metrics differ from the browser's, so fixed-width text re-wrapped and overflowed. Breaks are now measured in the browser and written as hard breaks.</li>
+                <li><b>Emoji no longer split words.</b> Break positions are computed in UTF-16 code units; slicing by code point drifted one place per astral character.</li>
+                <li><b>Masked icons keep their knockout</b> when the mask lives outside the icon's own <code class="i">&lt;svg&gt;</code>.</li>
+              </ul>
+            </div>
+          </div>
+        </article>
+
+        <article>
+          <div class="vm">
+            <span class="v">0.1.0</span>
+            <time datetime="2026-09-28">28 Sep 2026</time>
+          </div>
+          <div>
+            <h3>First cut</h3>
+            <p>The pipeline end to end: render in headless Chrome, extract computed geometry, build through Figma's Plugin API.</p>
+            <div class="grp">
+              <span class="gh">ADDED</span>
+              <ul>
+                <li><b>Live URL and codebase</b> as sources, with section-by-section builds for long pages.</li>
+                <li><b>Token derivation</b> — colour ramps, type scale, spacing and radii as Figma variables and text styles.</li>
+                <li><b>Bundled Figma connection</b>, so installing the plugin is the whole setup.</li>
+                <li><b>Idempotent builds</b> keyed on frame names: a re-run reconciles rather than duplicating.</li>
+              </ul>
+            </div>
+          </div>
+        </article>
+
+      </div>
+    </div>
+  </section>
+
+  <section style="padding-block:0 88px">
+    <div class="in">
+      <span class="kicker"><b>Known issues</b> &nbsp;/&nbsp; eight tracked, three that fail quietly</span>
+      <h2>Worth knowing before you trust a build</h2>
+      <p class="lead" style="margin-bottom:26px">These three report success and leave a file that looks finished.</p>
+      <div class="known">
+        <div class="kitem"><span class="tagn">SILENT</span><p><b>A fresh build can undo the line-break fix.</b> The generated runtime gives multi-line text a fixed width even when breaks are pinned, so Figma re-wraps it. Worked around on every run today; the real fix is two lines.</p></div>
+        <div class="kitem"><span class="tagn">SILENT</span><p><b>Borderless rectangles render as solid grey.</b> A rectangle with no source fill keeps Figma's default <code class="i">#D9D9D9</code>, so outlines and dividers arrive as filled blocks.</p></div>
+        <div class="kitem"><span class="tagn">SILENT</span><p><b>Cross-root SVG references drop.</b> An icon masked by a definition in another <code class="i">&lt;svg&gt;</code> inlines without it and renders solid. Also empties <code class="i">&lt;use&gt;</code> sprites.</p></div>
+        <div class="kitem"><span class="tagn">PARTIAL</span><p><b>Text shadows aren't captured</b>, so a CSS extrude arrives flat. Figma also caps drop shadows at eight per node and truncates without warning.</p></div>
+        <div class="kitem"><span class="tagn">PARTIAL</span><p><b>Repeating gradients flatten</b> to a single band. CSS filters, blend modes and masks don't cross over at all.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding-block:0 96px">
+    <div class="in">
+      <span class="kicker"><b>Next</b> &nbsp;/&nbsp; in order</span>
+      <h2>Coming up</h2>
+      <div class="road" style="margin-top:26px">
+        <div class="ritem"><span class="when now">SHIPPING</span><div><h4>One call, one URL</h4><p>A single entry point that resolves the source and builds, with no decisions in between.</p></div></div>
+        <div class="ritem"><span class="when next">NEXT</span><div><h4>Structured warnings</h4><p>Every quiet failure above returned as data, so a build can be trusted without someone eyeballing the result.</p></div></div>
+        <div class="ritem"><span class="when next">NEXT</span><div><h4>Figma plugin</h4><p>Import from inside Figma, with a viewport picker and multi-frame output.</p></div></div>
+        <div class="ritem"><span class="when later">LATER</span><div><h4>Round-tripping</h4><p>Figma edits flowing back as code or tokens.</p></div></div>
+      </div>
+      <p style="margin-top:28px"><a href="index.html#access">Request beta access &rarr;</a></p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="in">
+    <a class="brand" href="index.html"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 9.5V3h6.5" stroke="currentColor" stroke-width="2"/><path d="M21 14.5V21h-6.5" stroke="currentColor" stroke-width="2"/><rect x="9" y="9" width="6" height="6" fill="#FF6A2B"/></svg><b>Figma Forge</b></a>
+    <nav><a href="index.html">Overview</a><a href="install.html">Install</a><a href="index.html#access">Access</a></nav>
+    <span class="co">Nexprove</span>
+  </div>
+</footer>
+
+<script src="assets/app.js"></script>
+</body>
+</html>

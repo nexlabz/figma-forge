@@ -4,6 +4,7 @@ figma-forge-out/
 
 # Node
 node_modules/
+temp_auto_push.bat
 npm-debug.log*
 
 # OS / editor
@@ -11,4 +12,5 @@ npm-debug.log*
 Thumbs.db
 *.swp
 .idea/
-.vscode/
+.gitignore
+branch_structure.json
