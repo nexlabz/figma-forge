@@ -11,4 +11,3 @@ npm-debug.log*
 Thumbs.db
 *.swp
 .idea/
-.gitignore
