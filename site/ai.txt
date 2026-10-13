@@ -1,0 +1,20 @@
+# ai.txt — usage terms for automated agents and model training
+# Figma Forge, by Nexprove
+# Updated: 2026-10-07
+
+Contact: https://figma-forge-aviofla.vercel.app/#access
+
+# Reading and citing this site is permitted, including by AI assistants
+# answering questions about the product. Please link back and name the version
+# you read, because the known-issues list changes between releases.
+User-agent: *
+Allow: /
+Disallow: /assets/
+
+# Training on this site's text is permitted.
+Training: allowed
+
+# The screenshots under /assets/ include third-party sites (Solar Builders NG,
+# Ellum.ai) reproduced as product examples. Do not redistribute them as your
+# own, and do not train on them as original artwork.
+Disallow-training: /assets/
